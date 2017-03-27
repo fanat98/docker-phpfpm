@@ -1,4 +1,4 @@
-FROM php:5.6-fpm
+FROM php:7.0-fpm
 MAINTAINER Aslam Idrisov <aslam@malsa.ch>
 
 # Install general utilities
@@ -40,9 +40,6 @@ RUN docker-php-ext-install pdo_mysql
 # mysqli
 RUN docker-php-ext-install mysqli
 
-# mysql
-RUN docker-php-ext-install mysql
-
 # mcrypt
 RUN runtimeRequirements="re2c libmcrypt-dev" \
 	&& apt-get update && apt-get install -y ${runtimeRequirements} \
@@ -73,7 +70,7 @@ RUN buildRequirements="libyaml-dev" \
 RUN runtimeRequirements="libmagickwand-6.q16-dev --no-install-recommends" \
 	&& apt-get update && apt-get install -y ${runtimeRequirements} \
 	&& ln -s /usr/lib/x86_64-linux-gnu/ImageMagick-6.8.9/bin-Q16/MagickWand-config /usr/bin/ \
-	&& pecl install imagick \
+	&& pecl install imagick-3.4.1 \
 	&& echo "extension=imagick.so" > /usr/local/etc/php/conf.d/ext-imagick.ini \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -81,13 +78,21 @@ RUN runtimeRequirements="libmagickwand-6.q16-dev --no-install-recommends" \
 RUN docker-php-ext-install opcache
 
 # soap
-RUN docker-php-ext-install soap
+RUN buildRequirements="libxml2-dev" \
+	&& apt-get update && apt-get install -y ${buildRequirements} \
+	&& docker-php-ext-install soap \
+	&& apt-get purge -y ${buildRequirements} \
+	&& rm -rf /var/lib/apt/lists/*
 
 # zip
-RUN docker-php-ext-install zip
+RUN buildRequirements="zlib1g-dev" \
+	&& apt-get update && apt-get install -y ${buildRequirements} \
+	&& docker-php-ext-install zip \
+	&& apt-get purge -y ${buildRequirements} \
+	&& rm -rf /var/lib/apt/lists/*
 
 # redis
-RUN wget -O /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/2.2.7.tar.gz \
+RUN wget -O /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/3.0.0.tar.gz \
 	&& mkdir -p /tmp/redis \
 	&& tar xzf /tmp/redis.tar.gz -C /tmp/redis --strip-components=1 \
 	&& cd /tmp/redis \
@@ -99,7 +104,7 @@ RUN wget -O /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/2.2.7
 	&& rm -rf /tmp/redis.tar.gz /tmp/redis
 
 # APCu
-RUN pecl install apcu-4.0.10 \
+RUN pecl install apcu \
 	&& echo "extension=apcu.so\napc.enable_cli = 1" > /usr/local/etc/php/conf.d/ext-apcu.ini
 
 # create symlink to support standard /usr/bin/php
