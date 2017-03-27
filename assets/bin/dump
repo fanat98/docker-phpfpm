@@ -1,0 +1,196 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+	password=`strings /dev/urandom | grep -o '[[:alnum:]]' | head -n 64 | tr -d '\n'; echo`
+else
+	password="$1"
+fi
+
+case ${APPLICATION_TYPE} in
+	TYPO3|TYPO3_4|TYPO3_6)
+		docroot=
+		;;
+	TYPO3_7)
+		docroot=web/
+		;;
+	FLOW|FLOW_2|FLOW_3|NEOS|NEOS_1|NEOS_2)
+		docroot=Web/
+		;;
+	*)
+		echo "APPLICATION_TYPE '${APPLICATION_TYPE}' not supported."
+		exit 1
+esac
+
+dumpPath=/data/web/releases/current/${docroot}dump/
+
+case ${APPLICATION_TYPE} in
+	FLOW|FLOW_2|FLOW_3|NEOS|NEOS_1|NEOS_2)
+		htdocsExcludePathList=(
+			"${docroot}dump/*"
+		)
+		;;
+	TYPO3|TYPO3_4|TYPO3_6|TYPO3_7)
+		dbIgnoreTableList=(
+			'be_sessions'
+			'cache_extensions'
+			'cache_hash'
+			'cache_imagesizes'
+			'cache_md5params'
+			'cache_pages'
+			'cache_pagesection'
+			'cache_treelist'
+			'cache_typo3temp_log'
+			'cf_cache_hash'
+			'cf_cache_hash_tags'
+			'cf_cache_pages'
+			'cf_cache_pages_tags'
+			'cf_cache_pagesection'
+			'cf_cache_pagesection_tags'
+			'cf_cache_rootline'
+			'cf_cache_rootline_tags'
+			'cf_extbase_datamapfactory_datamap'
+			'cf_extbase_datamapfactory_datamap_tags'
+			'cf_extbase_object'
+			'cf_extbase_object_tags'
+			'cf_extbase_reflection'
+			'cf_extbase_reflection_tags'
+			'cf_extbase_typo3dbbackend_tablecolumns'
+			'cf_extbase_typo3dbbackend_tablecolumns_tags'
+			'cf_news_categorycache'
+			'cf_news_categorycache_tags'
+			'index_debug'
+			'index_fulltext'
+			'index_grlist'
+			'index_phash'
+			'index_rel'
+			'index_section'
+			'index_stat_search'
+			'index_stat_word'
+			'index_words'
+			'sys_refindex_rel'
+			'sys_refindex_res'
+			'fe_session_data'
+			'fe_sessions'
+			'sys_history'
+			'sys_lockedrecords'
+			'sys_log'
+			'sys_refindex'
+			'sys_refindex_rel'
+			'sys_refindex_res'
+			'sys_refindex_words'
+			'tx_crawler_process'
+			'tx_crawler_queue'
+			'tx_dbal_debuglog'
+			'tx_dbal_debuglog_where'
+			'tx_devlog'
+			'tx_extbase_cache_object'
+			'tx_extbase_cache_object_tags'
+			'tx_extbase_cache_reflection'
+			'tx_extbase_cache_reflection_tags'
+			'tx_l10nmgr_exportdata'
+			'tx_l10nmgr_index'
+			'tx_l10nmgr_job'
+			'tx_l10nmgr_priorities'
+			'tx_l10nmgr_translation'
+			'tx_powermail_mails'
+			'tx_realurl_chashcache'
+			'tx_realurl_errorlog'
+			'tx_realurl_pathcache'
+			'tx_realurl_uniqalias'
+			'tx_realurl_urldecodecache'
+			'tx_realurl_urlencodecache'
+			'tx_rsaauth_keys'
+			'tt_news_cache'
+			'tt_news_cache_tags'
+		)
+
+		htdocsExcludePathList=(
+			"${docroot}typo3temp"
+			"${docroot}typo3conf/temp_CACHED_*"
+			"${docroot}typo3conf/deprecation_*"
+			"${docroot}typo3conf/eventsubscription.*"
+			"${docroot}uploads/tx_thmailformplus/*"
+			"${docroot}uploads/tx_powermail/*"
+			"${docroot}dump/*"
+		)
+
+		shareExcludePathList=(
+			'uploads/tx_thmailformplus/*'
+			'uploads/tx_powermail/*'
+		)
+		;;
+esac
+
+#############################################################
+
+# db: create arguments for mysqldump command
+dbIgnoreTables=""
+for table in ${dbIgnoreTableList[*]}
+do
+    dbIgnoreTables="${dbIgnoreTables} --ignore-table=${dbName}.${table}"
+done
+
+# htdocs: create arguments for tar command
+htdocsExcludePaths=""
+for path in ${htdocsExcludePathList[*]}
+do
+	htdocsExcludePaths="${htdocsExcludePaths} --exclude=${path}"
+done
+
+# share: create arguments for tar command
+shareExcludePaths=""
+for path in ${shareExcludePathList[*]}
+do
+	shareExcludePaths="${shareExcludePaths} --exclude=${path}"
+done
+
+mkdir -p ${dumpPath}
+cd ${dumpPath}
+
+#
+# htdocs
+#
+echo htdocs...
+cd /data/web/releases/current/ \
+&& tar -cO ${htdocsExcludePaths} . \
+| nice gzip \
+| nice openssl des3 -out ${dumpPath}htdocs.tar.gz.enc -pass pass:${password}
+
+#
+# share
+#
+if [ -d "/data/web/share/" ]; then
+	echo share...
+	cd /data/web/share/ \
+	&& tar -cO ${shareExcludePaths} . \
+	| nice gzip \
+	| nice openssl des3 -out ${dumpPath}share.tar.gz.enc -pass pass:${password}
+fi
+#
+# mysql: create dump
+#
+echo db...
+{
+	nice mysqldump --host="${DB_PORT_3306_TCP_ADDR}" --port="${DB_PORT_3306_TCP_PORT}" --user="${DB_ENV_MYSQL_USER}" --password="${DB_ENV_MYSQL_PASSWORD}" --no-data "${DB_ENV_MYSQL_DATABASE}"
+	nice mysqldump --host="${DB_PORT_3306_TCP_ADDR}" --port="${DB_PORT_3306_TCP_PORT}" --user="${DB_ENV_MYSQL_USER}" --password="${DB_ENV_MYSQL_PASSWORD}" --no-create-info --lock-tables=false --single-transaction --disable-keys ${dbIgnoreTables} "${DB_ENV_MYSQL_DATABASE}"
+} \
+| gzip \
+| openssl des3 -out ${dumpPath}db.sql.gz.enc -pass pass:${password}
+
+echo
+echo
+echo You can download the dumps using the following URLs
+echo ${PRIMARY_SCHEMA}://${PRIMARY_DOMAIN}/dump/htdocs.tar.gz.enc
+echo ${PRIMARY_SCHEMA}://${PRIMARY_DOMAIN}/dump/share.tar.gz.enc
+echo ${PRIMARY_SCHEMA}://${PRIMARY_DOMAIN}/dump/db.sql.gz.enc
+echo
+du -ah ${dumpPath}
+echo
+echo Commands to decrypt and unpack
+echo "openssl des3 -d -in htdocs.tar.gz.enc | tar xzf -"
+echo "openssl des3 -d -in share.tar.gz.enc | tar xzf -"
+echo "openssl des3 -d -in db.sql.gz.enc | gzip -d > db.sql"
+echo
+echo Password: ${password}
+echo
+echo
