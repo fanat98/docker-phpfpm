@@ -13,6 +13,9 @@ case ${APPLICATION_TYPE} in
 	TYPO3_7)
 		docroot=web/
 		;;
+	LARAVEL)
+		docroot=public/
+		;;
 	FLOW|FLOW_2|FLOW_3|NEOS|NEOS_1|NEOS_2)
 		docroot=Web/
 		;;
@@ -24,7 +27,7 @@ esac
 dumpPath=/data/web/releases/current/${docroot}dump/
 
 case ${APPLICATION_TYPE} in
-	FLOW|FLOW_2|FLOW_3|NEOS|NEOS_1|NEOS_2)
+	FLOW|FLOW_2|FLOW_3|NEOS|NEOS_1|NEOS_2|LARAVEL)
 		htdocsExcludePathList=(
 			"${docroot}dump/*"
 		)

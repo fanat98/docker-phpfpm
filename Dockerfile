@@ -141,6 +141,17 @@ RUN apt-get update \
 	&& apt-get install -y cron \
 	&& rm -rf /var/lib/apt/lists/*
 
+#####################################
+# Exif:
+#####################################
+
+ARG INSTALL_EXIF=true
+RUN if [ ${INSTALL_EXIF} = true ]; then \
+    # Enable Exif PHP extentions requirements
+    docker-php-ext-install exif && \
+     docker-php-ext-enable exif \
+;fi
+
 # Workaround ImageMagick CVE-2016-3714
 ADD assets/policy.xml /etc/ImageMagick-6/policy.xml
 
