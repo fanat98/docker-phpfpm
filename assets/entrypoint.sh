@@ -118,7 +118,7 @@ case ${APPLICATION_TYPE} in
 			cp /opt/docker/.env.docker ${SETTINGS_PATH}.docker
 		fi
 		;;
-	HTML)
+	HTML|PHP)
 		DOCUMENT_ROOT=${VHOST_ROOT}
 		;;
 	*)
@@ -203,7 +203,7 @@ case ${APPLICATION_TYPE} in
 		su ${USER} export -c "FLOW_CONTEXT=${FLOW_CONTEXT} ${VHOST_ROOT}flow nodeindex:cleanup --force"
 		su ${USER} export -c "FLOW_CONTEXT=${FLOW_CONTEXT} php -d memory_limit=1024M ${VHOST_ROOT}flow nodeindex:build --workspace live --force" || echo "Error while indexing" &
 	;;
-	HTML)
+	HTML|PHP)
 	;;
 esac
 
