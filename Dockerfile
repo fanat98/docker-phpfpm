@@ -27,7 +27,7 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 # gd
-RUN buildRequirements="libpng12-dev libjpeg-dev libfreetype6-dev" \
+RUN buildRequirements="libpng-dev libjpeg-dev libfreetype6-dev" \
 	&& apt-get update && apt-get install -y ${buildRequirements} \
 	&& docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/lib \
 	&& docker-php-ext-install gd \
@@ -54,7 +54,7 @@ RUN buildRequirements="libicu-dev g++" \
 	&& apt-get update && apt-get install -y ${buildRequirements} \
 	&& docker-php-ext-install intl \
 	&& apt-get purge -y ${buildRequirements} \
-	&& runtimeRequirements="libicu52" \
+	&& runtimeRequirements="libicu57" \
 	&& apt-get install -y --auto-remove ${runtimeRequirements} \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -70,7 +70,7 @@ RUN buildRequirements="libyaml-dev" \
 RUN runtimeRequirements="libmagickwand-6.q16-dev --no-install-recommends" \
 	&& apt-get update && apt-get install -y ${runtimeRequirements} \
 	&& ln -s /usr/lib/x86_64-linux-gnu/ImageMagick-6.8.9/bin-Q16/MagickWand-config /usr/bin/ \
-	&& pecl install imagick-3.4.1 \
+	&& pecl install imagick-3.4.3 \
 	&& echo "extension=imagick.so" > /usr/local/etc/php/conf.d/ext-imagick.ini \
 	&& rm -rf /var/lib/apt/lists/*
 
