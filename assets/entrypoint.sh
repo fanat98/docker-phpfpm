@@ -11,13 +11,10 @@ update-ca-certificates --fresh
 
 
 #
-# Configure SSMTP
+# Configure MSMTP
 #
-SSMTP_SETTINGS_PATH=/etc/ssmtp/ssmtp.conf
-cp /opt/docker/ssmtp.conf ${SSMTP_SETTINGS_PATH}
-/bin/sed -i "s#{{ SSMTP_ROOT }}#${SSMTP_ROOT}#" ${SSMTP_SETTINGS_PATH}
+SSMTP_SETTINGS_PATH=/etc/msmtprc
 /bin/sed -i "s@{{ SSMTP_MAILHUB }}@${SSMTP_MAILHUB}@" ${SSMTP_SETTINGS_PATH}
-/bin/sed -i "s@{{ SSMTP_HOSTNAME }}@${SSMTP_HOSTNAME}@" ${SSMTP_SETTINGS_PATH}
 
 
 #
@@ -118,7 +115,7 @@ case ${APPLICATION_TYPE} in
 			cp /opt/docker/.env.docker ${SETTINGS_PATH}.docker
 		fi
 		;;
-	HTML|PHP)
+	HTML|PHP|PHPFOX)
 		DOCUMENT_ROOT=${VHOST_ROOT}
 		;;
 	*)
@@ -203,7 +200,7 @@ case ${APPLICATION_TYPE} in
 		su ${USER} export -c "FLOW_CONTEXT=${FLOW_CONTEXT} ${VHOST_ROOT}flow nodeindex:cleanup --force"
 		su ${USER} export -c "FLOW_CONTEXT=${FLOW_CONTEXT} php -d memory_limit=1024M ${VHOST_ROOT}flow nodeindex:build --workspace live --force" || echo "Error while indexing" &
 	;;
-	HTML|PHP)
+	HTML|PHP|PHPFOX)
 	;;
 esac
 

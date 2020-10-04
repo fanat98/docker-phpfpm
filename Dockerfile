@@ -1,4 +1,4 @@
-FROM php:7.1-fpm
+FROM php:7.3-fpm
 MAINTAINER Aslam Idrisov <aslam@malsa.ch>
 
 # Install general utilities
@@ -8,7 +8,10 @@ RUN apt-get update \
 		net-tools \
 		procps \
 		telnet \
+		libpcre3-dev \
 		netcat \
+		libzip-dev \
+		multiarch-support \
 	&& rm -r /var/lib/apt/lists/*
 
 # Install utilities used by TYPO3 CMS / Flow / Neos
@@ -21,7 +24,7 @@ RUN apt-get update \
 		wget \
 		curl \
 		git \
-		mysql-client \
+		mariadb-client \
 		moreutils \
 		dnsutils \
 	&& rm -rf /var/lib/apt/lists/*
@@ -40,21 +43,25 @@ RUN docker-php-ext-install pdo_mysql
 # mysqli
 RUN docker-php-ext-install mysqli
 
+
 # mcrypt
-RUN runtimeRequirements="re2c libmcrypt-dev" \
+RUN runtimeRequirements="re2c libmcrypt4 libmcrypt-dev mcrypt" \
 	&& apt-get update && apt-get install -y ${runtimeRequirements} \
-	&& docker-php-ext-install mcrypt \
+	&& pecl install mcrypt-1.0.2 \
+	&& docker-php-ext-enable mcrypt \
 	&& rm -rf /var/lib/apt/lists/*
 
 # mbstring
 RUN docker-php-ext-install mbstring
+
+
 
 # intl
 RUN buildRequirements="libicu-dev g++" \
 	&& apt-get update && apt-get install -y ${buildRequirements} \
 	&& docker-php-ext-install intl \
 	&& apt-get purge -y ${buildRequirements} \
-	&& runtimeRequirements="libicu57" \
+	&& runtimeRequirements="libicu63" \
 	&& apt-get install -y --auto-remove ${runtimeRequirements} \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -132,14 +139,19 @@ ADD assets/bin /usr/local/bin
 
 
 RUN apt-get update \
-	&& apt-get install -y ssmtp \
+	&& apt-get install -y msmtp \
 	&& rm -rf /var/lib/apt/lists/*
-ADD assets/ssmtp.conf /opt/docker/ssmtp.conf
+ADD assets/msmtprc /etc/msmtprc
 
 # Cron
 RUN apt-get update \
 	&& apt-get install -y cron \
 	&& rm -rf /var/lib/apt/lists/*
+	
+	
+#libpcre fix
+COPY ./assets/libpcre3_8.39-3_amd64.deb /tmp/
+RUN dpkg -i /tmp/libpcre3_8.39-3_amd64.deb
 
 #####################################
 # Exif:
