@@ -27,6 +27,7 @@ RUN apt-get update \
 		mariadb-client \
 		moreutils \
 		dnsutils \
+		ffmpeg \
 	&& rm -rf /var/lib/apt/lists/*
 
 # gd
