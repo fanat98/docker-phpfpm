@@ -1,4 +1,4 @@
-FROM php:7.3-fpm
+FROM php:7.4-fpm
 MAINTAINER Aslam Idrisov <aslam@malsa.ch>
 
 # Install general utilities
@@ -9,12 +9,13 @@ RUN apt-get update \
 		procps \
 		telnet \
 		libpcre3-dev \
+		libonig-dev \
+		libxml2-dev \
 		netcat \
 		libzip-dev \
 		multiarch-support \
 	&& rm -r /var/lib/apt/lists/*
 
-# Install utilities used by TYPO3 CMS / Flow / Neos
 RUN apt-get update \
 	&& apt-get install -y \
 		imagemagick \
@@ -33,7 +34,7 @@ RUN apt-get update \
 # gd
 RUN buildRequirements="libpng-dev libjpeg-dev libfreetype6-dev" \
 	&& apt-get update && apt-get install -y ${buildRequirements} \
-	&& docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/lib \
+	&& docker-php-ext-configure gd --with-freetype=/usr/include/ --with-jpeg=/usr/lib \
 	&& docker-php-ext-install gd \
 	&& apt-get purge -y ${buildRequirements} \
 	&& rm -rf /var/lib/apt/lists/*
@@ -44,17 +45,8 @@ RUN docker-php-ext-install pdo_mysql
 # mysqli
 RUN docker-php-ext-install mysqli
 
-
-# mcrypt
-RUN runtimeRequirements="re2c libmcrypt4 libmcrypt-dev mcrypt" \
-	&& apt-get update && apt-get install -y ${runtimeRequirements} \
-	&& pecl install mcrypt-1.0.2 \
-	&& docker-php-ext-enable mcrypt \
-	&& rm -rf /var/lib/apt/lists/*
-
 # mbstring
 RUN docker-php-ext-install mbstring
-
 
 
 # intl
@@ -85,12 +77,6 @@ RUN runtimeRequirements="libmagickwand-6.q16-dev --no-install-recommends" \
 # opcache
 RUN docker-php-ext-install opcache
 
-# soap
-RUN buildRequirements="libxml2-dev" \
-	&& apt-get update && apt-get install -y ${buildRequirements} \
-	&& docker-php-ext-install soap \
-	&& apt-get purge -y ${buildRequirements} \
-	&& rm -rf /var/lib/apt/lists/*
 
 # zip
 RUN buildRequirements="zlib1g-dev" \
@@ -133,26 +119,15 @@ RUN usermod -d /data/web/releases/current www-data
 
 ADD assets/php-fpm.conf /usr/local/etc/php-fpm.conf
 ADD assets/php.ini /usr/local/etc/php/conf.d/php.ini
-ADD assets/Settings.yaml.docker /opt/docker/Settings.yaml.docker
 ADD assets/.env.docker /opt/docker/.env.docker
 ADD assets/entrypoint.sh /entrypoint.sh
 ADD assets/bin /usr/local/bin
-
-
-RUN apt-get update \
-	&& apt-get install -y msmtp \
-	&& rm -rf /var/lib/apt/lists/*
-ADD assets/msmtprc /etc/msmtprc
 
 # Cron
 RUN apt-get update \
 	&& apt-get install -y cron \
 	&& rm -rf /var/lib/apt/lists/*
-	
-	
-#libpcre fix
-COPY ./assets/libpcre3_8.39-3_amd64.deb /tmp/
-RUN dpkg -i /tmp/libpcre3_8.39-3_amd64.deb
+
 
 #####################################
 # Exif:
@@ -160,13 +135,11 @@ RUN dpkg -i /tmp/libpcre3_8.39-3_amd64.deb
 
 ARG INSTALL_EXIF=true
 RUN if [ ${INSTALL_EXIF} = true ]; then \
-    # Enable Exif PHP extentions requirements
-    docker-php-ext-install exif && \
-     docker-php-ext-enable exif \
+	# Enable Exif PHP extentions requirements
+	docker-php-ext-install exif && \
+	 docker-php-ext-enable exif \
 ;fi
 
-# Workaround ImageMagick CVE-2016-3714
-ADD assets/policy.xml /etc/ImageMagick-6/policy.xml
 
 WORKDIR /data/web/releases/current
 
