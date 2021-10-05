@@ -1,5 +1,6 @@
-FROM php:7.4-fpm
+FROM php:8.0-fpm
 MAINTAINER Aslam Idrisov <aslam@malsa.ch>
+
 
 # Install general utilities
 RUN apt-get update \
@@ -13,7 +14,6 @@ RUN apt-get update \
 		libxml2-dev \
 		netcat \
 		libzip-dev \
-		multiarch-support \
 	&& rm -r /var/lib/apt/lists/*
 
 RUN apt-get update \
@@ -38,63 +38,38 @@ RUN buildRequirements="libpng-dev libjpeg-dev libfreetype6-dev" \
 	&& docker-php-ext-install gd \
 	&& apt-get purge -y ${buildRequirements} \
 	&& rm -rf /var/lib/apt/lists/*
-
-# pdo_mysql
-RUN docker-php-ext-install pdo_mysql
-
-# mysqli
-RUN docker-php-ext-install mysqli
-
-# mbstring
-RUN docker-php-ext-install mbstring
-
+	
+RUN curl http://ftp.debian.org/debian/pool/main/i/icu/libicu63_63.2-3_amd64.deb \
+--output libicu63_63.2-3_amd64.deb && dpkg -i libicu63_63.2-3_amd64.deb
 
 # intl
 RUN buildRequirements="libicu-dev g++" \
 	&& apt-get update && apt-get install -y ${buildRequirements} \
 	&& docker-php-ext-install intl \
 	&& apt-get purge -y ${buildRequirements} \
-	&& runtimeRequirements="libicu63" \
 	&& apt-get install -y --auto-remove ${runtimeRequirements} \
 	&& rm -rf /var/lib/apt/lists/*
 
-# yaml
-RUN buildRequirements="libyaml-dev" \
-	&& apt-get update && apt-get install -y ${buildRequirements} \
-	&& pecl install yaml \
-	&& echo "extension=yaml.so" > /usr/local/etc/php/conf.d/ext-yaml.ini \
-	&& apt-get purge -y ${buildRequirements} \
-	&& rm -rf /var/lib/apt/lists/*
 
-# imagick
-RUN runtimeRequirements="libmagickwand-6.q16-dev --no-install-recommends" \
-	&& apt-get update && apt-get install -y ${runtimeRequirements} \
-	&& ln -s /usr/lib/x86_64-linux-gnu/ImageMagick-6.8.9/bin-Q16/MagickWand-config /usr/bin/ \
-	&& pecl install imagick-3.4.3 \
-	&& echo "extension=imagick.so" > /usr/local/etc/php/conf.d/ext-imagick.ini \
-	&& rm -rf /var/lib/apt/lists/*
+# Install extensions
+# ref to: https://github.com/mlocati/docker-php-extension-installer
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 
-# opcache
-RUN docker-php-ext-install opcache
-
-
-# zip
-RUN buildRequirements="zlib1g-dev" \
-	&& apt-get update && apt-get install -y ${buildRequirements} \
-	&& docker-php-ext-install zip \
-	&& apt-get purge -y ${buildRequirements} \
-	&& rm -rf /var/lib/apt/lists/*
+RUN chmod +x /usr/local/bin/install-php-extensions && sync && \
+	install-php-extensions \
+	opcache \
+	imagick \
+	mysqli \
+	mbstring \
+	redis \
+	pdo_mysql \
+	yaml \
+	zip \
+	&& \
+	rm -rf /tmp/* /var/cache/apk/*
 
 # redis
-RUN wget -O /tmp/redis.tar.gz https://github.com/phpredis/phpredis/archive/3.0.0.tar.gz \
-	&& mkdir -p /tmp/redis \
-	&& tar xzf /tmp/redis.tar.gz -C /tmp/redis --strip-components=1 \
-	&& cd /tmp/redis \
-	&& phpize \
-	&& ./configure \
-	&& make \
-	&& make install \
-	&& echo "extension=redis.so" > /usr/local/etc/php/conf.d/ext-redis.ini \
+RUN echo "extension=redis.so" > /usr/local/etc/php/conf.d/ext-redis.ini \
 	&& rm -rf /tmp/redis.tar.gz /tmp/redis
 
 # APCu
