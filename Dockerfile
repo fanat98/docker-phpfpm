@@ -1,4 +1,4 @@
-FROM php:8.0-fpm
+FROM php:8.1-fpm
 MAINTAINER Aslam Idrisov <aslam@malsa.ch>
 
 
@@ -12,7 +12,6 @@ RUN apt-get update \
 		libpcre3-dev \
 		libonig-dev \
 		libxml2-dev \
-		netcat \
 		libzip-dev \
 	&& rm -r /var/lib/apt/lists/*
 
@@ -38,9 +37,6 @@ RUN buildRequirements="libpng-dev libjpeg-dev libfreetype6-dev" \
 	&& docker-php-ext-install gd \
 	&& apt-get purge -y ${buildRequirements} \
 	&& rm -rf /var/lib/apt/lists/*
-	
-RUN curl http://ftp.debian.org/debian/pool/main/i/icu/libicu63_63.2-3_amd64.deb \
---output libicu63_63.2-3_amd64.deb && dpkg -i libicu63_63.2-3_amd64.deb
 
 # intl
 RUN buildRequirements="libicu-dev g++" \
