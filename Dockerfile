@@ -1,6 +1,5 @@
-FROM php:8.1-fpm
+FROM php:8.2-fpm
 MAINTAINER Aslam Idrisov <aslam@malsa.ch>
-
 
 # Install general utilities
 RUN apt-get update \
